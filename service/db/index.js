@@ -56,6 +56,28 @@ const query = async (sql) => {
   }
 };
 
+const getById = async (o, id) => {
+  if (o === undefined) {
+    throw new Error(`object can not be null/undefined`);
+  }
+
+  if (id === undefined) {
+    throw new Error(`id can not be null/undefined`);
+  }
+
+  o.setValue({ id, });
+  const queryResult = await query(o.querySQL());
+  const resultSet = queryResult ? queryResult.result : [];
+
+  if (resultSet.length === 0) {
+    throw new Error(`can not find any instance for ${o.constructor.name} by pk(${id})`);
+  } else if (resultSet.length > 1) {
+    throw new Error(`find more than 1 instances for ${o.constructor.name} by pk(${id})`);
+  }
+
+  return resultSet[0];
+};
+
 const update = async (sql) => {
   console.log(`operation database update something with condition: ${sql}`);
 
@@ -108,4 +130,5 @@ module.exports = {
   closeConnection,
   // 直接导出适配器供高级使用
   getAdapter,
+  getById,
 };

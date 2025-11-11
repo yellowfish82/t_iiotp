@@ -1,5 +1,5 @@
 {
-  "name": "arcelormittal_demo_server",
+  "name": "t_iiotp",
   "version": "1.0.0",
   "description": "this is a web server play a role like IIoT platform",
   "main": "index.js",

@@ -8,10 +8,10 @@ const v = 'v1.0.0';
 let app;
 const datapool = {};
 
-describe('Use JEST to test an Arcelor Mittal Demo Restful API based on Express', () => {
+describe('Use JEST to test an IIOT Demo Restful API based on Express', () => {
   beforeAll(() => {
-    const arcelormittalApp = require('../../../app');
-    app = arcelormittalApp.fetchApp(configurations.env.port_test);
+    const tIIoTApp = require('../../../app');
+    app = tIIoTApp.fetchApp(configurations.env.port_test);
   });
 
   afterAll(async () => {

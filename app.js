@@ -52,9 +52,35 @@ const start = () => {
     service.mqttService.handleMessage(message);
   });
 
-  app.listen(configurations.env.port, () => {
-    console.log(`Arcelor Mittal server listening on port ${configurations.env.port}`);
+  const server = app.listen(configurations.env.port, () => {
+    console.log(`IIoT server listening on port ${configurations.env.port}`);
   });
+
+  // 优雅关闭处理
+  const gracefulShutdown = (signal) => {
+    console.log(`\n${signal} received. Shutting down gracefully...`);
+    
+    // 关闭 HTTP 服务器
+    server.close(() => {
+      console.log('HTTP server closed.');
+      
+      // 关闭 MQTT 客户端
+      mqttClient.end(false, () => {
+        console.log('MQTT client disconnected.');
+        process.exit(0);
+      });
+    });
+
+    // 如果 10 秒后还没关闭，强制退出
+    setTimeout(() => {
+      console.error('Could not close connections in time, forcefully shutting down');
+      process.exit(1);
+    }, 10000);
+  };
+
+  // 监听进程信号
+  process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+  process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 };
 
 const fetchApp = (port) => {
@@ -62,7 +88,7 @@ const fetchApp = (port) => {
   config(app);
 
   return app.listen(port || configurations.env.port, () => {
-    console.log(`Arcelor Mittal server listening on port ${port || configurations.env.port}`);
+    console.log(`IIoT server listening on port ${port || configurations.env.port}`);
   });
 };
 

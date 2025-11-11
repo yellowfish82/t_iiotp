@@ -10,7 +10,7 @@ class SqlJsAdapter {
   constructor() {
     this.db = null;
     this.SQL = null;
-    this.dbPath = path.join(__dirname, '../../arcelormittal.db');
+    this.dbPath = path.join(__dirname, '../../t.db');
   }
 
   /**

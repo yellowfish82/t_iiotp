@@ -29,6 +29,7 @@ class CreateModelCtrler extends BaseCtrler {
           name: p.name,
           max: p.max,
           min: p.min,
+          type: p.type
         });
 
         await service.dbService.add(propertyEntity.insertSQL());

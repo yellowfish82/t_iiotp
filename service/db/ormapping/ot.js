@@ -4,9 +4,9 @@ const { columnType, } = require('../../../config/db');
 
 /**
  *   CREATE TABLE "ot" (
- *     "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
- *     "timestamp" integer NOT NULL,
- *     "payload" TEXT(900) NOT NULL,
+ *     "id" integer NOT NULL PRIMARY KEY,
+ *     "timestamp" bigint NOT NULL,
+ *     "payload" text NOT NULL,
  *     "thing_id" integer,
  *     FOREIGN KEY ("thing_id") REFERENCES "thing_instance" ("id") ON DELETE CASCADE ON UPDATE CASCADE
  *   );
@@ -18,7 +18,7 @@ class OT extends BaseEntity {
     this.columns = {
       'id': columnType.NUMBER,
       'timestamp': columnType.NUMBER,
-      'payload': columnType.JSON,
+      'payload': columnType.STRING,
       'thing_id': columnType.NUMBER,
     };
     this.pk = 'id';

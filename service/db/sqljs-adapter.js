@@ -42,11 +42,20 @@ class SqlJsAdapter {
 
   /**
    * 执行SQL语句（用于CREATE、INSERT、UPDATE、DELETE）
+   * @param {string} sql - SQL语句
+   * @param {array} params - 参数数组（sql.js不直接支持，但保持接口一致）
    */
-  async exec(sql) {
+  async exec(sql, params = []) {
     await this.init();
     try {
-      this.db.exec(sql);
+      // sql.js 的 exec 不支持参数化，如果有参数需要使用 prepare
+      if (params && params.length > 0) {
+        const stmt = this.db.prepare(sql);
+        stmt.run(params);
+        stmt.free();
+      } else {
+        this.db.exec(sql);
+      }
       this.saveToFile(); // 保存到文件
       return { changes: this.db.getRowsModified() };
     } catch (error) {

@@ -4,14 +4,14 @@ const { columnType, } = require('../../../config/db');
 
 /**
  *   CREATE TABLE "thing_instance" (
- *     "id" integer NOT NULL PRIMARY KEY AUTOINCREMENT,
+ *     "id" integer NOT NULL PRIMARY KEY,
  *     "thing_model_id" integer,
- *     "sn" TEXT(10) NOT NULL,
- *     "status" integer(1) NOT NULL DEFAULT 0,
- *     "key" TEXT(10) NOT NULL,
- *     "name" TEXT(300) NOT NULL,
- *     "brand" TEXT(300) NOT NULL,
- *     "note" TEXT(500),
+ *     "sn" varchar(50) NOT NULL,
+ *     "status" integer NOT NULL DEFAULT 0,
+ *     "key" varchar(100) NOT NULL,
+ *     "name" varchar(300) NOT NULL,
+ *     "brand" varchar(300) NOT NULL,
+ *     "note" varchar(500),
  *     "frequency" integer DEFAULT 2,
  *     FOREIGN KEY ("thing_model_id") REFERENCES "thing_model" ("id") ON DELETE CASCADE ON UPDATE CASCADE
  *   );

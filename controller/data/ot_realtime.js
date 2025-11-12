@@ -10,8 +10,12 @@ class OTRealtimeCtrler extends BaseCtrler {
     otEntity.setValue({
       thing_id,
     });
-    const sql = otEntity.querySQL().slice(0, -1) + ` ORDER BY timestamp DESC LIMIT 1;`;
-    const otData = await service.dbService.query(sql);
+
+    const queryResult = otEntity.querySQL();
+    const sql = queryResult.sql.slice(0, -1) + ` ORDER BY timestamp DESC LIMIT 1;`;
+    const p = queryResult.params;
+    
+    const otData = await service.dbService.query({ sql, params: p });
 
     return {
       status: 200,

@@ -20,95 +20,114 @@ class BaseEntity {
   insertSQL = () => {
     /**
          * INSERT INTO COMPANY (ID,NAME,AGE,ADDRESS,SALARY)
-         * VALUES (2, 'Allen', 25, 'Texas', 15000.00 );
+         * VALUES ($1, $2, $3, $4, $5);
+         * 使用参数化查询，避免SQL注入
          */
 
-    let cols = ''; let vals = '';
+    const cols = [];
+    const params = [];
+    const placeholders = [];
+    let paramIndex = 1;
+
     Object.keys(this.columns).forEach((c) => {
       if (this.value[c] !== undefined) {
-        cols += `${c},`;
-
-        let value;
-        if (this.columns[c] === columnType.STRING) {
-          value = `'${this.value[c]}',`;
-        } else if (this.columns[c] === columnType.JSON) {
-          value = `'${JSON.stringify(this.value[c])}',`;
+        cols.push(c);
+        
+        // JSON类型需要序列化
+        if (this.columns[c] === columnType.JSON) {
+          params.push(JSON.stringify(this.value[c]));
         } else {
-          value = `${this.value[c]},`;
+          params.push(this.value[c]);
         }
-        vals += value;
+        
+        placeholders.push(`$${paramIndex}`);
+        paramIndex++;
       }
     });
 
-    cols = cols.substr(0, cols.length - 1);
-    vals = vals.substr(0, vals.length - 1);
-
-    return `INSERT INTO ${this.getTableName()} (${cols}) VALUES (${vals});`;
+    const sql = `INSERT INTO ${this.getTableName()} (${cols.join(',')}) VALUES (${placeholders.join(',')});`;
+    
+    return { sql, params };
   };
 
   delSQL = (condition) => {
     /**
          * DELETE FROM table_name
          * WHERE [condition];
+         * 使用参数化查询
          */
     if (!condition && !this.value[this.pk]) {
       throw new Error(`not offerred pk: ${this.pk}, and current version only support update specified entity`);
     }
 
+    let sql;
+    let params = [];
+
     if (!condition && this.value[this.pk]) {
-      condition = `${this.pk}=${this.value[this.pk]}`;
+      sql = `DELETE FROM ${this.getTableName()} WHERE ${this.pk}=$1;`;
+      params = [this.value[this.pk]];
+    } else {
+      // 如果传入了自定义condition，暂时保持原样（需要调用方自行处理参数）
+      sql = `DELETE FROM ${this.getTableName()} WHERE ${condition};`;
     }
 
-    return `DELETE FROM ${this.getTableName()} WHERE ${condition};`;
+    return { sql, params };
   };
 
   updateSQL = (condition) => {
     /**
          * UPDATE table_name
-         * SET column1 = value1, column2 = value2...., columnN = valueN
-         * WHERE [condition];
-         *
-         * UPDATE COMPANY SET ADDRESS = 'Texas', SALARY = 20000.00;
+         * SET column1 = $1, column2 = $2
+         * WHERE condition;
+         * 使用参数化查询
          */
 
     if (!condition && !this.value[this.pk]) {
       throw new Error(`not offerred pk: ${this.pk}, and current version only support update specified entity`);
     }
 
-    if (!condition && this.value[this.pk]) {
-      condition = `${this.pk}=${this.value[this.pk]}`;
-    }
-
-    let setString = '';
+    const setItems = [];
+    const params = [];
+    let paramIndex = 1;
 
     Object.keys(this.columns).forEach((key) => {
       if (key !== this.pk && this.value[key] !== undefined) {
-        let value;
-        if (this.columns[key] === columnType.STRING) {
-          value = `${key}='${this.value[key]}',`;
-        } else if (this.columns[key] === columnType.JSON) {
-          value = `${key}='${JSON.stringify(this.value[key])}',`;
+        setItems.push(`${key}=$${paramIndex}`);
+        
+        // JSON类型需要序列化
+        if (this.columns[key] === columnType.JSON) {
+          params.push(JSON.stringify(this.value[key]));
         } else {
-          value = `${key}=${this.value[key]},`;
+          params.push(this.value[key]);
         }
-        setString += value;
+        
+        paramIndex++;
       }
     });
 
-    setString = setString.substr(0, setString.length - 1);
-    return `UPDATE ${this.getTableName()} SET ${setString} WHERE ${condition};`;
+    let sql;
+    if (!condition && this.value[this.pk]) {
+      sql = `UPDATE ${this.getTableName()} SET ${setItems.join(',')} WHERE ${this.pk}=$${paramIndex};`;
+      params.push(this.value[this.pk]);
+    } else {
+      // 如果传入了自定义condition，暂时保持原样
+      sql = `UPDATE ${this.getTableName()} SET ${setItems.join(',')} WHERE ${condition};`;
+    }
+
+    return { sql, params };
   };
 
   querySQL = () => {
     /**
-        * SELECT column1, column2, columnN FROM table_name;
-        * or
-        * SELECT * FROM table_name;
-        *
-        * SELECT * FROM sqlite_master WHERE type = 'table' AND tbl_name = 'COMPANY';
+        * SELECT * FROM table_name WHERE condition;
+        * 使用参数化查询
         */
 
-    return `SELECT * FROM ${this.getTableName()} WHERE ${this.getCondition()};`;
+    const conditionResult = this.getCondition();
+    return {
+      sql: `SELECT * FROM ${this.getTableName()} WHERE ${conditionResult.condition};`,
+      params: conditionResult.params
+    };
   };
 
   getTableName = () => {
@@ -129,23 +148,30 @@ class BaseEntity {
   };
 
   getCondition = () => {
-    let conditions = '1=1';
+    /**
+     * 生成WHERE条件，使用参数化查询
+     * 返回 { condition: string, params: array }
+     */
+    let condition = '1=1';
+    const params = [];
+    let paramIndex = 1;
 
     Object.keys(this.columns).forEach((key) => {
       if (this.value[key] !== undefined) {
-        let value;
-        if (this.columns[key] === columnType.STRING) {
-          value = ` AND ${key}='${this.value[key]}'`;
-        } else if (this.columns[key] === columnType.JSON) {
-          value = ` AND ${key}='${JSON.stringify(this.value[key])}',`;
+        condition += ` AND ${key}=$${paramIndex}`;
+        
+        // JSON类型需要序列化
+        if (this.columns[key] === columnType.JSON) {
+          params.push(JSON.stringify(this.value[key]));
         } else {
-          value = ` AND ${key}=${this.value[key]}`;
+          params.push(this.value[key]);
         }
-        conditions += value;
+        
+        paramIndex++;
       }
     });
 
-    return conditions;
+    return { condition, params };
   };
 
   getValue = (key) => this.value[key];

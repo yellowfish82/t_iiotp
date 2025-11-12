@@ -4,11 +4,12 @@ const { columnType, } = require('../../../config/db');
 
 /**
  *   CREATE TABLE "thing_model_properties" (
- *     "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
- *     "thing_model_id" INTEGER NOT NULL,
- *     "name" TEXT(200) NOT NULL,
- *     "min" integer(10) NOT NULL,
- *     "max" integer(10) NOT NULL,
+ *     "id" integer NOT NULL PRIMARY KEY,
+ *     "thing_model_id" integer NOT NULL,
+ *     "name" varchar(200) NOT NULL,
+ *     "min" integer,
+ *     "max" integer,
+ *     "type" varchar,
  *     FOREIGN KEY ("thing_model_id") REFERENCES "thing_model" ("id") ON DELETE CASCADE ON UPDATE CASCADE
  *   );
  */
@@ -22,6 +23,7 @@ class ThingModelProperties extends BaseEntity {
       'name': columnType.STRING,
       'min': columnType.NUMBER,
       'max': columnType.NUMBER,
+      'type': columnType.STRING,
     };
     this.pk = 'id';
   }

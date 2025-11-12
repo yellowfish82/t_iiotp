@@ -35,8 +35,17 @@ const checkAuth = async (auth) => {
 };
 
 const storeData = async (id, thingModelID, data) => {
-  const otDataId = await storeOriginalData(id, data);
-  await storeAlertData(otDataId, thingModelID, data);
+  // 处理单个数据项的情况
+  if (!Array.isArray(data)) {
+    console.log('data is not array: ', JSON.stringify(data));
+    return;
+  }
+  
+  // 处理数组数据
+  for (const r of data) {
+    const otDataId = await storeOriginalData(id, r);
+    await storeAlertData(otDataId, thingModelID, r);
+  }
 };
 
 const storeOriginalData = async (id, data) => {

@@ -4,9 +4,9 @@ const { columnType, } = require('../../../config/db');
 
 /**
  *   CREATE TABLE "thing_model" (
- *     "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
- *     "name" text(60) NOT NULL,
- *     "description" TEXT(500)
+ *     "id" integer NOT NULL PRIMARY KEY,
+ *     "name" varchar(60) NOT NULL,
+ *     "description" text
  *   );
  */
 class ThingModel extends BaseEntity {

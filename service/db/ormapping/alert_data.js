@@ -4,7 +4,7 @@ const { columnType, } = require('../../../config/db');
 
 /**
  *   CREATE TABLE "alert_data" (
- *     "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+ *     "id" integer NOT NULL PRIMARY KEY,
  *     "ot_data" integer,
  *     "condition" integer,
  *     FOREIGN KEY ("ot_data") REFERENCES "ot" ("id") ON DELETE CASCADE ON UPDATE CASCADE,

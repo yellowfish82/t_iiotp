@@ -5,13 +5,38 @@ const OT = require('../../service/db/ormapping/ot');
 
 class OTHistoryCtrler extends BaseCtrler {
   businessLogic = async (params) => {
-    const { thing_id, starttime, endtime, } = params;
+    const { thing_id, starttime, endtime, sort_by, sort_order, limit } = params;
+
+    // console.log(`\n\n\nbusinessLogic params: ${JSON.stringify(params)}\n\n\n`);
     const otEntity = new OT();
     otEntity.setValue({
       thing_id,
     });
-    const sql = otEntity.querySQL();
-    const otData = await service.dbService.query(sql);
+
+    // 获取基本查询SQL
+    let queryResult = otEntity.querySQL();
+    let sql = queryResult.sql;
+    let p = queryResult.params;
+
+    // console.log(`\n\n\nbusinessLogic sql: ${sql}, params: ${JSON.stringify(p)}\n\n\n`);
+    // 添加排序功能
+    if (sort_by) {
+      // 默认为升序，如果 sort_order 为 'desc' 则降序
+      const order = sort_order && sort_order.toLowerCase() === 'desc' ? 'DESC' : 'ASC';
+      sql = sql.replace(/;$/, ` ORDER BY ${sort_by} ${order};`);
+    } else {
+      // 如果没有指定排序字段，默认使用 timestamp ASC 排序
+      sql = sql.replace(/;$/, ` ORDER BY timestamp ASC;`);
+    }
+
+    // 添加限制返回数据条数功能
+    if (limit && !isNaN(parseInt(limit))) {
+      // 添加 LIMIT 子句
+      sql = sql.replace(/;$/, ` LIMIT ${parseInt(limit)};`);
+    }
+
+    // console.log(`OT History query SQL: ${sql}`);
+    const otData = await service.dbService.query({ sql, params: p});
 
     return {
       status: 200,
@@ -38,11 +63,11 @@ class OTHistoryCtrler extends BaseCtrler {
 
     const conditions = JSON.parse(req.params.conditions);
 
+    // console.log(`\n\n\nOT History query conditions: ${req.params.conditions}\n\n\n`);
+
     return {
       params: {
-        thing_id: conditions.thing_id,
-        // starttime,
-        // endtime,
+        ...conditions,
       },
     };
   };

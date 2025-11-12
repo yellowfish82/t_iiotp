@@ -131,7 +131,8 @@ const storeAlertData = async (otDataId, thingModelID, data) => {
 
 const checkOTData = (v, c) => {
   let triggerCondition = false;
-  switch (c.expression) {
+  const expression = parseInt(c.expression);
+  switch (expression) {
     case configurations.common.CONDITION_EXPRESSION.EQUAL:
       if (v === c.threshold) {
         triggerCondition = true;

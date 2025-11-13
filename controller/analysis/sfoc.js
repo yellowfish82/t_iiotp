@@ -1,71 +1,119 @@
+const regression = require('regression');
+
 const service = require('../../service');
 const BaseCtrler = require('../baseController');
 
 const OT = require('../../service/db/ormapping/ot');
+const ThingInstance = require('../../service/db/ormapping/thing_instance');
 
 class SFOCCtrler extends BaseCtrler {
   businessLogic = async (params) => {
-    const { thing_id, starttime, endtime, sort_by, sort_order, limit } = params;
+    const { thing } = params;
 
-    // console.log(`\n\n\nbusinessLogic params: ${JSON.stringify(params)}\n\n\n`);
     const otEntity = new OT();
     otEntity.setValue({
-      thing_id,
+      thing_id: thing.id,
     });
 
     // 获取基本查询SQL
-    let queryResult = otEntity.querySQL();
-    let sql = queryResult.sql;
-    let p = queryResult.params;
+    const queryInfo = otEntity.querySQL();
+    const otData = await service.dbService.query(queryInfo);
 
-    // console.log(`\n\n\nbusinessLogic sql: ${sql}, params: ${JSON.stringify(p)}\n\n\n`);
-    // 添加排序功能
-    if (sort_by) {
-      // 默认为升序，如果 sort_order 为 'desc' 则降序
-      const order = sort_order && sort_order.toLowerCase() === 'desc' ? 'DESC' : 'ASC';
-      sql = sql.replace(/;$/, ` ORDER BY ${sort_by} ${order};`);
-    } else {
-      // 如果没有指定排序字段，默认使用 timestamp ASC 排序
-      sql = sql.replace(/;$/, ` ORDER BY timestamp ASC;`);
+    // 初始化统计变量
+    let scatterData = [];
+    let minRpm = Number.POSITIVE_INFINITY;
+    let maxRpm = Number.NEGATIVE_INFINITY;
+    let minSfoc = Number.POSITIVE_INFINITY;
+    let maxSfoc = Number.NEGATIVE_INFINITY;
+    let sumSfoc = 0;
+    let validCount = 0;
+
+    // 一次循环完成所有处理
+    for (const item of otData.result) {
+      try {
+        const d = JSON.parse(item.payload);
+        if (!d || d.rpm <= 0 || d.power <= 0 || d.fuelFlow >= 0) continue;
+
+        // 计算SFOC (g/kWh)
+        const sfoc = Math.abs(d.fuelFlow) / d.power * 1000;
+
+        // 更新散点数据
+        scatterData.push([d.rpm, sfoc]);
+
+        // 更新统计值
+        if (d.rpm < minRpm) minRpm = d.rpm;
+        if (d.rpm > maxRpm) maxRpm = d.rpm;
+        if (sfoc < minSfoc) minSfoc = sfoc;
+        if (sfoc > maxSfoc) maxSfoc = sfoc;
+        sumSfoc += sfoc;
+        validCount++;
+
+      } catch (err) {
+        // 跳过解析错误项
+        continue;
+      }
     }
 
-    // 添加限制返回数据条数功能
-    if (limit && !isNaN(parseInt(limit))) {
-      // 添加 LIMIT 子句
-      sql = sql.replace(/;$/, ` LIMIT ${parseInt(limit)};`);
+    // 计算平均值
+    const avgSfoc = validCount > 0 ? sumSfoc / validCount : 0;
+
+    // 做线性回归
+    const result = regression.linear(scatterData, { precision: 4 });
+
+    // 生成拟合线
+    const step = (maxRpm - minRpm) / 50;
+    const lineData = [];
+    for (let x = minRpm; x <= maxRpm; x += step) {
+      const y = result.predict(x)[1];
+      lineData.push([x, y]);
     }
 
-    // console.log(`OT History query SQL: ${sql}`);
-    const otData = await service.dbService.query({ sql, params: p});
+    // 输出结果
+    const sfoc = {
+      scatterData,
+      lineData,
+      statistics: {
+        avgSfoc: Number(avgSfoc.toFixed(2)),
+        minSfoc: Number(minSfoc.toFixed(2)),
+        maxSfoc: Number(maxSfoc.toFixed(2)),
+        minRpm: Number(minRpm.toFixed(2)),
+        maxRpm: Number(maxRpm.toFixed(2)),
+      }
+    };
 
     return {
       status: 200,
-      info: { otData: otData.result, },
+      info: { sfoc },
     };
   };
 
   verifyReq = async (req) => {
-    if (!req.params) {
+    if (!req.body) {
       return {
         status: 400,
-        errMsg: 'did not specified query body',
+        errMsg: 'did not give thing instance information',
       };
     }
 
-    if (!req.params.conditions) {
+    if (!req.body.id) {
       return {
         status: 400,
-        errMsg: 'did not specified query conditions',
+        errMsg: 'did not give thing instance id',
       };
     }
 
-    const conditions = JSON.parse(req.params.conditions);
+    const thing = await service.dbService.getById(new ThingInstance(), req.body.id);
 
-    // console.log(`\n\n\nOT History query conditions: ${req.params.conditions}\n\n\n`);
+    if (!thing) {
+      return {
+        status: 400,
+        errMsg: 'thing instance not found',
+      };
+    }
 
     return {
       params: {
-        ...conditions,
+        thing,
       },
     };
   };
